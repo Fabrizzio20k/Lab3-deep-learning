@@ -1,0 +1,17 @@
+beautifulsoup4==4.15.0
+certifi==2026.6.17
+charset-normalizer==3.4.7
+filelock==3.29.4
+gdown==6.1.0
+h5py==3.16.0
+idna==3.18
+numpy==2.4.6
+pandas==3.0.3
+pysocks==1.7.1
+python-dateutil==2.9.0.post0
+requests==2.34.2
+six==1.17.0
+soupsieve==2.8.4
+tqdm==4.68.3
+typing-extensions==4.15.0
+urllib3==2.7.0
