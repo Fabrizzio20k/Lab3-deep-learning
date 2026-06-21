@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=forest_train
+#SBATCH --job-name=train_v2
 #SBATCH --partition=gpu
 #SBATCH --nodelist=ag001
 #SBATCH --gres=gpu:a100_2g.10gb:1
@@ -18,9 +18,10 @@ python train.py \
     --train_h5 data/train.h5 \
     --train_csv data/train.csv \
     --pretrained pretrained.pt \
-    --epochs 60 \
+    --epochs 100 \
     --batch 32 \
-    --lr 1e-3 \
+    --lr 5e-4 \
     --embed 256 \
-    --out model_best.pt \
-    --workers 8
+    --out model_v2.pt \
+    --no-val \
+    --workers 2

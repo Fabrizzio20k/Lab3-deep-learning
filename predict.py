@@ -7,19 +7,35 @@ from dataset import ForestUnlabeledDataset
 from model import ForestModel
 
 
+def tta_predict(model, x_hr, x_ts, device, n_tta=8):
+    preds = []
+    with torch.no_grad():
+        with torch.amp.autocast(device_type="cuda"):
+            preds.append(model(x_hr, x_ts))
+            preds.append(model(x_hr.flip(-1), x_ts))
+            preds.append(model(x_hr.flip(-2), x_ts))
+            preds.append(model(x_hr.flip(-1).flip(-2), x_ts))
+            preds.append(model(x_hr.transpose(-1, -2), x_ts))
+            preds.append(model(x_hr.transpose(-1, -2).flip(-1), x_ts))
+            preds.append(model(x_hr.transpose(-1, -2).flip(-2), x_ts))
+            preds.append(model(x_hr.transpose(-1, -2).flip(-1).flip(-2), x_ts))
+    return torch.stack(preds).mean(0)
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--unlabeled_h5", default="data/unlabeled.h5")
     parser.add_argument("--test_ids", default="data/testIDs.csv")
     parser.add_argument("--model", default="model_best.pt")
-    parser.add_argument("--batch", type=int, default=256)
+    parser.add_argument("--batch", type=int, default=128)
     parser.add_argument("--embed", type=int, default=256)
     parser.add_argument("--out", default="submission.csv")
     parser.add_argument("--workers", type=int, default=4)
+    parser.add_argument("--tta", action="store_true", default=True)
     args = parser.parse_args()
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    print(f"Device: {device}")
+    print(f"Device: {device} | TTA: {args.tta}")
 
     test_df = pd.read_csv(args.test_ids)
     test_ids = test_df.iloc[:, 0].tolist()
@@ -35,11 +51,16 @@ def main():
 
     all_preds = []
     with torch.no_grad():
-        for x_hr, _, x_ts in dl:
+        for i, (x_hr, _, x_ts) in enumerate(dl):
             x_hr, x_ts = x_hr.to(device), x_ts.to(device)
-            with torch.amp.autocast(device_type="cuda"):
-                preds = model(x_hr, x_ts)
+            if args.tta:
+                preds = tta_predict(model, x_hr, x_ts, device)
+            else:
+                with torch.amp.autocast(device_type="cuda"):
+                    preds = model(x_hr, x_ts)
             all_preds.append(preds.float().cpu().numpy())
+            if i % 10 == 0:
+                print(f"  Batch {i}/{len(dl)}")
 
     all_preds = np.concatenate(all_preds, axis=0)
 
