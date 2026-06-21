@@ -1,12 +1,12 @@
 #!/bin/bash
-#SBATCH --job-name=train_v2
+#SBATCH --job-name=train_effnet
 #SBATCH --partition=gpu
 #SBATCH --nodelist=ag001
 #SBATCH --gres=gpu:a100_2g.10gb:1
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=8
 #SBATCH --mem=32G
-#SBATCH --time=02:00:00
+#SBATCH --time=03:00:00
 #SBATCH --output=logs/train_%j.log
 #SBATCH --error=logs/train_%j.err
 
@@ -17,11 +17,13 @@ source .venv/bin/activate
 python train.py \
     --train_h5 data/train.h5 \
     --train_csv data/train.csv \
-    --pretrained pretrained.pt \
-    --epochs 100 \
+    --epochs 80 \
     --batch 32 \
-    --lr 5e-4 \
+    --lr 3e-4 \
+    --lr_backbone 1e-5 \
+    --freeze-epochs 10 \
     --embed 256 \
-    --out model_v2.pt \
+    --backbone efficientnet_b0 \
+    --out model_effnet.pt \
     --no-val \
     --workers 2

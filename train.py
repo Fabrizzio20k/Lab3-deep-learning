@@ -14,17 +14,20 @@ def main():
     parser.add_argument("--train_h5", default="data/train.h5")
     parser.add_argument("--train_csv", default="data/train.csv")
     parser.add_argument("--pretrained", default=None)
-    parser.add_argument("--epochs", type=int, default=100)
+    parser.add_argument("--epochs", type=int, default=60)
     parser.add_argument("--batch", type=int, default=32)
-    parser.add_argument("--lr", type=float, default=1e-3)
+    parser.add_argument("--lr", type=float, default=3e-4)
+    parser.add_argument("--lr_backbone", type=float, default=1e-5)
     parser.add_argument("--embed", type=int, default=256)
+    parser.add_argument("--backbone", type=str, default="efficientnet_b0")
     parser.add_argument("--out", default="model_best.pt")
     parser.add_argument("--workers", type=int, default=2)
     parser.add_argument("--no-val", action="store_true", default=False)
+    parser.add_argument("--freeze-epochs", type=int, default=10)
     args = parser.parse_args()
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    print(f"Device: {device}")
+    print(f"Device: {device} | backbone={args.backbone}")
 
     ds = ForestTrainDataset(args.train_h5, args.train_csv, augment=True)
 
@@ -32,7 +35,7 @@ def main():
         train_dl = DataLoader(ds, batch_size=args.batch, shuffle=True,
                               num_workers=args.workers, pin_memory=True)
         val_dl = None
-        print(f"Training on all {len(ds)} samples (no val split)")
+        print(f"Training on all {len(ds)} samples")
     else:
         val_n = max(1, int(0.1 * len(ds)))
         train_n = len(ds) - val_n
@@ -43,19 +46,30 @@ def main():
         val_dl = DataLoader(val_ds, batch_size=args.batch, shuffle=False,
                             num_workers=args.workers, pin_memory=True)
 
-    model = ForestModel(embed_dim=args.embed).to(device)
+    model = ForestModel(embed_dim=args.embed, backbone=args.backbone).to(device)
 
     if args.pretrained:
         state = torch.load(args.pretrained, map_location=device)
         missing, unexpected = model.load_state_dict(state, strict=False)
         print(f"Loaded pretrained. Missing={len(missing)}, Unexpected={len(unexpected)}")
 
-    opt = torch.optim.AdamW(model.parameters(), lr=args.lr, weight_decay=1e-4)
+    # Freeze backbone initially
+    for p in model.hr_enc.backbone.parameters():
+        p.requires_grad_(False)
+    print(f"Backbone frozen for first {args.freeze_epochs} epochs")
+
+    param_groups = model.get_param_groups(lr_backbone=args.lr_backbone, lr_head=args.lr)
+    opt = torch.optim.AdamW(param_groups, weight_decay=1e-4)
     sched = torch.optim.lr_scheduler.CosineAnnealingLR(opt, T_max=args.epochs)
     scaler = torch.amp.GradScaler()
 
     best_loss = float("inf")
     for epoch in range(args.epochs):
+        if epoch == args.freeze_epochs:
+            for p in model.hr_enc.backbone.parameters():
+                p.requires_grad_(True)
+            print(f"Epoch {epoch+1}: backbone unfrozen")
+
         model.train()
         train_loss = 0.0
         for x_hr, x_ts, y in train_dl:
@@ -70,8 +84,8 @@ def main():
             scaler.update()
             train_loss += loss.item()
 
-        tl = train_loss / len(train_dl)
         sched.step()
+        tl = train_loss / len(train_dl)
 
         if val_dl is not None:
             model.eval()
@@ -84,15 +98,15 @@ def main():
                     val_loss += brier_loss(pred, y).item()
             vl = val_loss / len(val_dl)
             print(f"Epoch {epoch+1}/{args.epochs} | train={tl:.4f} | val={vl:.4f}")
-            if vl < best_loss:
-                best_loss = vl
-                torch.save(model.state_dict(), args.out)
-                print(f"  -> Best model saved (val={vl:.4f})")
+            monitor = vl
         else:
             print(f"Epoch {epoch+1}/{args.epochs} | train={tl:.4f}")
-            if tl < best_loss:
-                best_loss = tl
-                torch.save(model.state_dict(), args.out)
+            monitor = tl
+
+        if monitor < best_loss:
+            best_loss = monitor
+            torch.save(model.state_dict(), args.out)
+            print(f"  -> Saved best (loss={monitor:.4f})")
 
     print(f"Best loss: {best_loss:.4f}")
 

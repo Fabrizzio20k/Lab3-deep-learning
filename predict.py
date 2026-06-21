@@ -29,6 +29,7 @@ def main():
     parser.add_argument("--model", default="model_best.pt")
     parser.add_argument("--batch", type=int, default=128)
     parser.add_argument("--embed", type=int, default=256)
+    parser.add_argument("--backbone", type=str, default="efficientnet_b0")
     parser.add_argument("--out", default="submission.csv")
     parser.add_argument("--workers", type=int, default=4)
     parser.add_argument("--tta", action="store_true", default=True)
@@ -40,7 +41,7 @@ def main():
     test_df = pd.read_csv(args.test_ids)
     test_ids = test_df.iloc[:, 0].tolist()
 
-    model = ForestModel(embed_dim=args.embed).to(device)
+    model = ForestModel(embed_dim=args.embed, backbone=args.backbone).to(device)
     model.load_state_dict(torch.load(args.model, map_location=device))
     model.eval()
 
