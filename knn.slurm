@@ -19,7 +19,7 @@ python knn_predict.py \
     --train_csv data/train.csv \
     --unlabeled_h5 data/unlabeled.h5 \
     --test_ids data/testIDs.csv \
-    --model model_pseudo.pt \
+    --model model_effnet.pt \
     --embed 256 \
     --k 15 \
     --batch 128 \
