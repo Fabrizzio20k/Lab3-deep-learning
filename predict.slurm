@@ -12,7 +12,7 @@
 
 mkdir -p logs
 module load python3/3.13.2
-source lab3/bin/activate
+source .venv/bin/activate
 
 python predict.py \
     --unlabeled_h5 data/unlabeled.h5 \

@@ -12,7 +12,7 @@
 
 mkdir -p logs
 module load python3/3.13.2
-source lab3/bin/activate
+source .venv/bin/activate
 
 python train.py \
     --train_h5 data/train.h5 \
