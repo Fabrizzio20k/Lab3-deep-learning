@@ -29,8 +29,9 @@ def main():
     model.eval()
 
     ds = ForestUnlabeledDataset(args.unlabeled_h5, ids=test_ids)
-    dl = DataLoader(ds, batch_size=args.batch, shuffle=False,
-                    num_workers=args.workers, pin_memory=True)
+    dl = DataLoader(
+        ds, batch_size=args.batch, shuffle=False, num_workers=args.workers, pin_memory=True
+    )
 
     all_preds = []
     with torch.no_grad():
@@ -42,8 +43,10 @@ def main():
 
     all_preds = np.concatenate(all_preds, axis=0)
 
-    rows = [{"id": sid, "Target": " ".join(f"{v:.6f}" for v in pred)}
-            for sid, pred in zip(test_ids, all_preds)]
+    rows = [
+        {"Id": sid, "Target": " ".join(f"{v:.6f}" for v in pred)}
+        for sid, pred in zip(test_ids, all_preds)
+    ]
     pd.DataFrame(rows).to_csv(args.out, index=False)
     print(f"Saved {len(rows)} predictions to {args.out}")
 
