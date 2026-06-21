@@ -17,8 +17,8 @@ source .venv/bin/activate
 python predict.py \
     --unlabeled_h5 data/unlabeled.h5 \
     --test_ids data/testIDs.csv \
-    --model model_v2.pt \
+    --model model_pseudo.pt \
     --batch 64 \
     --embed 256 \
-    --out submission_v2.csv \
+    --out submission_pseudo.csv \
     --workers 2
