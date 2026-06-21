@@ -2,7 +2,7 @@
 #SBATCH --job-name=forest_train
 #SBATCH --partition=gpu
 #SBATCH --nodelist=ag001
-#SBATCH --gres=gpu:1
+#SBATCH --gres=gpu:a100_2g.10gb:1
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=8
 #SBATCH --mem=32G
@@ -18,8 +18,9 @@ python train.py \
     --train_h5 data/train.h5 \
     --train_csv data/train.csv \
     --pretrained pretrained.pt \
-    --epochs 50 \
-    --batch 64 \
+    --epochs 60 \
+    --batch 32 \
     --lr 1e-3 \
     --embed 256 \
-    --out model_best.pt
+    --out model_best.pt \
+    --workers 8
