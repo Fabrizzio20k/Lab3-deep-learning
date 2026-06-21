@@ -5,7 +5,7 @@
 #SBATCH --gres=gpu:a100_2g.10gb:1
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=8
-#SBATCH --mem=32G
+#SBATCH --mem=64G
 #SBATCH --time=04:00:00
 #SBATCH --output=logs/pretrain_%j.log
 #SBATCH --error=logs/pretrain_%j.err
@@ -21,4 +21,4 @@ python pretrain.py \
     --lr 3e-4 \
     --embed 256 \
     --out pretrained.pt \
-    --workers 8
+    --workers 2
